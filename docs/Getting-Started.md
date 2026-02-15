@@ -1,146 +1,121 @@
 # Getting Started
 
-This guide walks you through installing MCLRamLib and running your first autonomous routine.
+This guide walks you from zero to a working MCL-localized autonomous in under 5 minutes.
 
 ---
 
 ## Prerequisites
 
-- **PROS 4.1.1** or later installed ([PROS Installation Guide](https://pros.cs.purdue.edu/v5/getting-started/index.html))
-- **C++17** or later (included with PROS 4)
-- A VEX V5 robot with:
-  - Differential drivetrain (2+ motors per side)
-  - V5 Inertial Sensor (IMU)
-  - At least one V5 Distance Sensor (more recommended)
+- **PROS 4.1.1+** installed
+- VEX V5 robot with differential drivetrain + IMU
+- At least one V5 Distance Sensor (recommended: 2-4)
 
 ---
 
 ## Installation
 
-### Step 1: Copy Library Files
-
-Copy the `include/localization/` and `src/localization/` folders into your PROS project:
-
-```
-your-project/
-├── include/
-│   └── localization/
-│       ├── pose2d.hpp
-│       ├── odometry.hpp
-│       ├── mcl.hpp
-│       ├── trajectory.hpp
-│       ├── ramsete.hpp
-│       ├── localization_manager.hpp
-│       ├── chassis_controller.hpp
-│       ├── robot_geometry.hpp
-│       └── robot_ports.hpp
-├── src/
-│   └── localization/
-│       ├── pose2d.cpp
-│       ├── odometry.cpp
-│       ├── mcl.cpp
-│       ├── trajectory.cpp
-│       ├── ramsete.cpp
-│       ├── localization_manager.cpp
-│       ├── chassis_controller.cpp
-│       ├── robot_geometry.cpp
-│       └── example_auton.cpp
-```
-
-### Step 2: Configure Your Robot
-
-Edit `src/localization/robot_geometry.cpp` with your robot's physical measurements:
-
-```cpp
-const RobotGeometry DEFAULT_GEOMETRY = {
-    2.0,    // wheelRadius (inches) — 4" wheels = 2.0
-    12.5,   // trackWidth (inches) — center-to-center of drive wheels
-    1.0,    // gearRatio (motor:wheel)
-    300.0,  // encoderTicksPerRev (600RPM blue = 300)
-    false,  // hasTrackingWheels
-    1.375,  // trackWheelRadius (if applicable)
-    10.0,   // trackWheelTrackWidth
-    0.0,    // trackWheelCenterOffset
-    {5.0, 0.0, 0.0} // distanceSensorOffset (default)
-};
-```
-
-> [!TIP]
-> See the [Configuration](Configuration.md) page for detailed explanations of each parameter.
-
-### Step 3: Configure Ports
-
-Edit `src/localization/robot_geometry.cpp` or create a `robot_ports.hpp`:
-
-```cpp
-const RobotPorts DEFAULT_PORTS = {
-    1,  // leftDrivePort
-    2,  // rightDrivePort
-    3,  // imuPort
-    4,  // distanceSensorPort
-    0, 0, 0 // tracking wheel ports (0 = unused)
-};
-```
-
-### Step 4: Build
-
-```bash
-pros make
-```
+Copy `include/localization/` and `src/localization/` into your PROS project. Then `pros make`.
 
 ---
 
-## Your First Autonomous
+## Step 1: Create Your Chassis
 
-Create a minimal autonomous routine:
+In your main file (or a globals file), create the chassis **just like EZ-Template**:
 
 ```cpp
-#include "localization/chassis_controller.hpp"
-#include "localization/localization_manager.hpp"
-
+#include "localization/mcl_chassis.hpp"
 using namespace localization;
 
+MCLChassis chassis(
+    {1, 2},      // Left motor ports
+    {-3, -4},    // Right motor ports (negative = reversed)
+    5,           // IMU port
+    4.0,         // Wheel diameter (inches)
+    12.5,        // Track width (inches)
+    1.0,         // Gear ratio (1.0 = direct drive)
+    600          // RPM (600=blue, 200=green, 100=red)
+);
+```
+
+> [!TIP]
+> That single constructor sets up the entire localization stack — odometry, MCL particle filter, Bayes filter, RAMSETE controller, and a background update loop. You don't need to touch any of it.
+
+---
+
+## Step 2: Add Sensors
+
+In `initialize()`, register your distance sensors:
+
+```cpp
+void initialize() {
+    pros::lcd::initialize();
+
+    // add_sensor(port, forward_offset, left_offset, facing_angle_degrees)
+    chassis.add_sensor(6, 5, 0, 0);       // Front: 5" forward, facing 0°
+    chassis.add_sensor(7, 0, 5, 90);      // Left: 5" left, facing 90°
+    chassis.add_sensor(8, 0, -5, -90);    // Right: 5" right, facing -90°
+}
+```
+
+Each sensor is registered **once** with where it's mounted. The library reads and fuses them automatically.
+
+---
+
+## Step 3: Write Your Autonomous
+
+```cpp
 void autonomous() {
-    // Hardware
-    pros::MotorGroup left({1, 2}), right({-3, -4});
-    pros::Imu imu(5);
-    pros::Distance frontSensor(6);
+    chassis.set_pose(24, 24, 0);   // Where am I starting?
 
-    // Localization
-    auto odom = std::make_shared<DifferentialOdometry>(&left, &right, &imu, DEFAULT_GEOMETRY);
-    auto mcl = std::make_shared<MCLLocalizer>(200);
-    auto mgr = std::make_shared<LocalizationManager>(odom, mcl, DEFAULT_GEOMETRY);
-
-    // Register sensor
-    mgr->addSensor({&frontSensor, {5.0, 0.0, 0.0}});
-
-    // Chassis
-    ChassisController chassis(&left, &right, mgr.get(), DEFAULT_GEOMETRY);
-    mgr->resetPose({24, 24, 0});
-
-    // Field map (VEX field boundary)
-    FieldMap field = {{{0,0,144,0}, {144,0,144,144}, {144,144,0,144}, {0,144,0,0}}};
-
-    // Background update task
-    pros::Task updateTask([&]() {
-        while (true) {
-            mgr->update(0.01);
-            mgr->updateAllSensors(field);
-            pros::delay(10);
-        }
-    });
-
-    // Move!
-    chassis.moveToPoint(48, 48);
-    chassis.moveToPose({72, 72, M_PI/2});
+    chassis.drive_to(48, 48);       // Drive to (48, 48)
+    chassis.turn_to(90);            // Turn to face 90°
+    chassis.pose_to(72, 72, 180);   // Drive to (72, 72) facing 180°
+    chassis.drive_to(24, 24);       // Go home
     chassis.stop();
+}
+```
+
+**Everything is in inches and degrees.** No radians, no shared pointers, no update loops.
+
+---
+
+## Step 4: Telemetry (Optional)
+
+Print your position to the V5 brain screen:
+
+```cpp
+void opcontrol() {
+    while (true) {
+        pros::lcd::print(0, "X: %.1f  Y: %.1f", chassis.get_x(), chassis.get_y());
+        pros::lcd::print(1, "Heading: %.1f°", chassis.get_heading());
+        pros::lcd::print(2, "MCL Confidence: %.0f%%", chassis.get_confidence());
+        pros::delay(20);
+    }
 }
 ```
 
 ---
 
+## API Summary
+
+| Command | Description |
+|---|---|
+| `chassis.set_pose(x, y, heading)` | Set starting position |
+| `chassis.drive_to(x, y)` | Drive to a point |
+| `chassis.turn_to(heading)` | Turn in place |
+| `chassis.pose_to(x, y, heading)` | Drive to a pose |
+| `chassis.follow(trajectory)` | Follow a path |
+| `chassis.stop()` | Brake |
+| `chassis.get_x()` | Current X |
+| `chassis.get_y()` | Current Y |
+| `chassis.get_heading()` | Current heading (degrees) |
+| `chassis.get_confidence()` | MCL confidence (0-100%) |
+| `chassis.add_sensor(port, fwd, left, angle)` | Register a sensor |
+
+---
+
 ## Next Steps
 
-- [Configuration](Configuration.md) — Deep dive into robot parameters
-- [Sensor Setup](Sensor-Setup.md) — Add and configure multiple distance sensors
-- [Tuning Guide](Tuning-Guide.md) — Optimize performance for competition
+- [Configuration](Configuration.md) — Understand every parameter
+- [Sensor Setup](Sensor-Setup.md) — Add more sensors with custom tuning
+- [Tuning Guide](Tuning-Guide.md) — Optimize for competition
