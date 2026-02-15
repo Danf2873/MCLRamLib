@@ -83,4 +83,4 @@ Full wiki-style documentation is available in the [`docs/`](docs/) folder:
 | [API Reference](docs/API-Reference.md) | Complete class & method reference |
 
 ---
-Developed for the 2024-2025 V5 Competition Season.
+Developed for the 2025-2026 V5 Competition Season.
