@@ -1,96 +1,75 @@
-# RAMSETE + MCL Localization Library for PROS 4.1.1
+# 🤖 MCL + RAMSETE Localization
+> **Absolute positioning and path following for PROS 4.1.1**
 
-A high-performance, modular localization and trajectory tracking library for VEX V5 robots using the PROS 4 kernel. This library fuses odometry (motor encoders/tracking wheels + IMU) with Monte Carlo Localization (distance sensors) to provide absolute robot positioning on a VEX field.
-
-## Features
-- **Differential Odometry**: Supports motor encoders, 2-wheel tracking, and 3-wheel tracking configurations.
-- **Monte Carlo Localization (MCL)**: Corrects odometry drift using distance sensors against a field map.
-- **RAMSETE Controller**: Advanced nonlinear path following for smooth and accurate autonomous movements.
-- **Pose2D System**: Robust 2D vector math for field-relative coordinates.
-- **Thread-Safe API**: Designed for easy integration into standard PROS projects.
+This library provides a high-performance localization stack for VEX V5 robots. It fuses **Odometry** (IMU + Encoders) with **Monte Carlo Localization** (Distance Sensors) for sub-inch accuracy across the field.
 
 ---
 
-## 🚀 Quick Start Tutorial
+## ✨ Features
+- 📍 **MCL Fused Pose**: Monte Carlo Localization corrects wheel slip and drift.
+- 🏎️ **RAMSETE Control**: Nonlinear trajectory tracking for smooth autonomous.
+- 🛠️ **Concise API**: Direct commands like `moveToPoint` and `moveToPose`.
+- 🧩 **Modular Design**: Easy to integrate, extend, and tune.
 
-### 1. Hardware Setup
-Define your robot's physical properties and sensor ports in `src/localization/robot_geometry.cpp`:
+---
 
-```cpp
-const RobotGeometry DEFAULT_GEOMETRY = {
-    2.0,    // wheelRadius (4" wheels)
-    12.5,   // trackWidth (inches)
-    1.0,    // gearRatio
-    300.0,  // encoderTicksPerRev (600 RPM Blue Cartridge)
-    // ... tracking wheel config ...
-};
-```
+## 🚀 Quick Start (Concise API)
 
-### 2. Initialization
-In your `autonomous()` or `initialize()` function:
+### 1. Setup Your Chassis
+Initialize the `ChassisController` in your autonomous routine:
 
 ```cpp
-#include "localization/localization_manager.hpp"
+#include "localization/chassis_controller.hpp"
 
 void autonomous() {
-    // 1. Initialize sensor handles
+    // Standard PROS 4 sensors
     pros::MotorGroup left({1, 2});
-    pros::MotorGroup right({3, 4});
+    pros::MotorGroup right({-3, -4});
     pros::Imu imu(5);
     pros::Distance dist(6);
 
-    // 2. Create components
-    auto odometry = std::make_shared<DifferentialOdometry>(&left, &right, &imu, DEFAULT_GEOMETRY);
+    // Initialize Localization & Chassis
+    auto odom = std::make_shared<DifferentialOdometry>(&left, &right, &imu, DEFAULT_GEOMETRY);
     auto mcl = std::make_shared<MCLLocalizer>(200);
-    auto manager = std::make_unique<LocalizationManager>(odometry, mcl, DEFAULT_GEOMETRY);
-
-    // 3. Set starting position
+    auto manager = std::make_shared<LocalizationManager>(odom, mcl, DEFAULT_GEOMETRY);
+    
+    ChassisController chassis(&left, &right, manager.get(), DEFAULT_GEOMETRY);
+    
     manager->resetPose({24.0, 24.0, 0.0});
 }
 ```
 
-### 3. The Update Loop
-Run the localization manager in your main control loop (at least 50-100Hz):
+### 2. Move with Ease
+Use the short commands to program your autonomous fast:
 
 ```cpp
-while (true) {
-    manager->update(0.01); // 10ms delta
+// Move to a field coordinate (inches)
+chassis.moveToPoint(48.0, 48.0);
 
-    // Sensor-based correction
-    double d = dist.get_distance() / 25.4; // mm to inches
-    if (dist.get_confidence() > 50) {
-        manager->sensorUpdate(d, my_field_map);
-    }
+// Move to a specific pose (x, y, theta)
+chassis.moveToPose({72.0, 72.0, M_PI/2});
 
-    Pose2D pose = manager->getFusedPose();
-    printf("Robot Pose: X: %.2f, Y: %.2f, Theta: %.2f\n", pose.x, pose.y, pose.theta);
-    
-    pros::delay(10);
-}
-```
-
-### 4. Path Following
-Use the `RamseteController` to track a trajectory:
-
-```cpp
-RamseteController controller(2.0, 0.7);
-TrajectoryPoint target = my_trajectory.sample(currentTime);
-
-ChassisSpeeds output = controller.computeControl(manager->getFusedPose(), target.pose, target.v, target.w);
-// Apply output.v and output.w to your drivetrain motors
+// Follow a pre-planned trajectory path
+chassis.follow(autonPath);
 ```
 
 ---
 
-## 📁 File Structure
-- `include/localization/`: Header files for all modules.
-- `src/localization/`: Full source implementations.
-- `src/localization/example_auton.cpp`: A complete end-to-end example.
-
-## 📖 Further Documentation
-For detailed API references, tuning tips, and advanced usage, please refer to the internal documentation artifacts:
-- [Walkthrough & Architecture](file:///C:/Users/dfoch/.gemini/antigravity/brain/d4e35621-8b56-4217-b53d-5d00dc832b06/walkthrough.md)
-- [Full API Reference & Tutorial](file:///C:/Users/dfoch/.gemini/antigravity/brain/d4e35621-8b56-4217-b53d-5d00dc832b06/documentation.md)
+## �️ Configuration
+Edit your robot's physical specs in [robot_geometry.cpp](file:///C:/Users/dfoch/OneDrive/Documents/GitHub/MCLRamLib/src/localization/robot_geometry.cpp):
+- **Track Width**: Inches between your drive wheels.
+- **Wheel Radius**: Radius of your omni/traction wheels.
+- **Encoder Ticks**: Resolution of your drivetrain encoders.
 
 ---
-Developed for PROS 4.1.1 V5 Projects.
+
+## 📖 Learn More
+> [!TIP]
+> Use the [Full API Documentation](file:///C:/Users/dfoch/.gemini/antigravity/brain/d4e35621-8b56-4217-b53d-5d00dc832b06/documentation.md) for a deep dive into tuning your MCL particles and RAMSETE gains.
+
+- [Tutorial Walkthrough](file:///C:/Users/dfoch/.gemini/antigravity/brain/d4e35621-8b56-4217-b53d-5d00dc832b06/walkthrough.md)
+- [Example Autonomous](file:///C:/Users/dfoch/OneDrive/Documents/GitHub/MCLRamLib/src/localization/example_auton.cpp)
+
+---
+Developed for the 2024-2025 V5 Competition Season.
+
