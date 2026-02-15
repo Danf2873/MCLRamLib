@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cmath>
 
-
 namespace localization {
 
 double FieldMap::expectedDistance(const Pose2D &pose) const {
@@ -92,11 +91,15 @@ void MCLLocalizer::updateFromDistanceSensor(double measuredDistance,
 
     // Gaussian likelihood
     double error = measuredDistance - expected;
-    p.weight = std::exp(-(error * error) / (2 * sigmaDistance * sigmaDistance));
+    double likelihood =
+        std::exp(-(error * error) / (2 * sigmaDistance * sigmaDistance));
+
+    // Multiply current weight (Bayesian update)
+    p.weight *= likelihood;
     totalWeight += p.weight;
   }
 
-  if (totalWeight > 0) {
+  if (totalWeight > 1e-9) {
     for (auto &p : particles)
       p.weight /= totalWeight;
   } else {
@@ -136,6 +139,24 @@ Pose2D MCLLocalizer::estimatePose() const {
     meanSin += std::sin(p.pose.theta) * p.weight;
   }
   return {meanX, meanY, std::atan2(meanSin, meanCos)};
+}
+
+double MCLLocalizer::getConfidence() const {
+  // Compute weighted variance of particle positions
+  Pose2D mean = estimatePose();
+  double varX = 0, varY = 0;
+  for (const auto &p : particles) {
+    double dx = p.pose.x - mean.x;
+    double dy = p.pose.y - mean.y;
+    varX += dx * dx * p.weight;
+    varY += dy * dy * p.weight;
+  }
+  double spread = std::sqrt(varX + varY);
+
+  // Map spread to confidence: spread=0 -> 1.0, spread>=10" -> ~0.0
+  // Using exponential decay: confidence = exp(-spread / scale)
+  double scale = 3.0; // inches — tune this for your field
+  return std::exp(-spread / scale);
 }
 
 void MCLLocalizer::setPose(const Pose2D &pose, double stdev) {

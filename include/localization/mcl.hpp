@@ -5,7 +5,6 @@
 #include <random>
 #include <vector>
 
-
 namespace localization {
 
 /**
@@ -85,6 +84,12 @@ public:
    * @return Weighted average pose.
    */
   Pose2D estimatePose() const;
+
+  /**
+   * @brief Computes MCL confidence based on particle spread.
+   * @return A value between 0.0 (no confidence) and 1.0 (full confidence).
+   */
+  double getConfidence() const;
 
   /**
    * @brief Sets the pose of all particles (reset filter).
