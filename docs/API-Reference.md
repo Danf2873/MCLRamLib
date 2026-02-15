@@ -13,6 +13,7 @@ Complete reference for all public classes and methods in the MCL + RAMSETE Local
 - [FieldMap](#fieldmap)
 - [Trajectory](#trajectory)
 - [RamseteController](#ramsetecontroller)
+- [PurePursuitController](#purepursuitcontroller)
 - [DistanceSensorConfig](#distancesensorconfig)
 - [LocalizationManager](#localizationmanager)
 - [ChassisController](#chassiscontroller)
@@ -172,6 +173,12 @@ struct TrajectoryPoint {
 Trajectory(const std::vector<TrajectoryPoint>& points);
 ```
 
+### Static Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `fromPoses(poses, velocity)` | `Trajectory` | Creates a trajectory from a list of positions |
+
 ### Methods
 
 | Method | Returns | Description |
@@ -207,6 +214,28 @@ struct ChassisSpeeds {
     double w;  // angular velocity
 };
 ```
+
+---
+
+## PurePursuitController
+
+**Header:** `localization/pure_pursuit.hpp`
+
+Geometric path-following controller.
+
+### Constructor
+
+```cpp
+PurePursuitController(double lookahead = 12.0, double maxVelocity = 20.0);
+```
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `computeControl(current, trajectory, lastIndex)` | `pair<Speeds, int>` | Computes velocities and next lookahead index |
+| `setLookaheadDistance(dist)` | `void` | Updates lookahead distance |
+| `setMaxLinearVelocity(v)` | `void` | Updates maximum linear velocity |
 
 ---
 
@@ -285,6 +314,7 @@ ChassisController(
 | `moveToPoint(x, y, timeout)` | `void` | Drives to a field coordinate |
 | `moveToPose(target, timeout)` | `void` | Drives to a pose (x, y, θ) |
 | `follow(trajectory, timeout)` | `void` | Follows a trajectory with RAMSETE |
+| `pure_pursuit(poses, lookahead, timeout)` | `void` | Follows a geometric path with Pure Pursuit |
 | `stop()` | `void` | Brakes all motors |
 
 ### Default Timeouts
@@ -294,3 +324,4 @@ ChassisController(
 | `moveToPoint` | 5000 ms |
 | `moveToPose` | 5000 ms |
 | `follow` | 10000 ms |
+| `pure_pursuit` | 10000 ms |

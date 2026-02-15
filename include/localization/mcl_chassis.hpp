@@ -142,6 +142,15 @@ public:
   void follow(const Trajectory &trajectory, int timeout = 10000);
 
   /**
+   * @brief Follow a path using the Pure Pursuit controller.
+   * @param poses Vector of poses defining the path.
+   * @param lookahead Lookahead distance in inches (default 12.0).
+   * @param timeout Max time in ms (default 10000).
+   */
+  void pure_pursuit(const std::vector<Pose2D> &poses, double lookahead = 12.0,
+                    int timeout = 10000);
+
+  /**
    * @brief Stop all motors (brake).
    */
   void stop();

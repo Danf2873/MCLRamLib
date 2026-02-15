@@ -13,7 +13,8 @@ ChassisController chassis(&left, &right, manager.get(), DEFAULT_GEOMETRY);
 
 chassis.moveToPoint(48, 48);              // Move to a point
 chassis.moveToPose({72, 72, M_PI/2});     // Move to a pose (x, y, heading)
-chassis.follow(trajectory);               // Follow a trajectory
+chassis.follow(trajectory);               // Follow a trajectory (RAMSETE)
+chassis.pure_pursuit(poses);              // Follow a path (Pure Pursuit)
 chassis.stop();                           // Brake
 ```
 
@@ -76,6 +77,33 @@ chassis.follow(traj, 10000);    // 10 second timeout
 |---|---|---|---|
 | `trajectory` | `Trajectory` | — | The path to follow |
 | `timeout` | `int` | `10000` | Maximum time in milliseconds |
+
+---
+
+## `pure_pursuit(poses, lookahead, timeout)`
+
+Follows a geometric path using the **Pure Pursuit** controller. This is ideal for paths exported from tools like **PathJerry** that provide a list of points.
+
+```cpp
+std::vector<Pose2D> path = {
+    {0, 0, 0},
+    {24, 24, M_PI/4},
+    {48, 0, 0}
+};
+
+chassis.pure_pursuit(path);              // Default 12" lookahead
+chassis.pure_pursuit(path, 15.0);        // 15" lookahead for smoother curves
+chassis.pure_pursuit(path, 12.0, 5000);  // 5 second timeout
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `poses` | `std::vector<Pose2D>` | — | Vector of points to follow |
+| `lookahead` | `double` | `12.0` | Target distance ahead of robot (inches) |
+| `timeout` | `int` | `10000` | Maximum time in milliseconds |
+
+> [!TIP]
+> Use a **smaller** lookahead for tighter paths and a **larger** lookahead for smoother, faster movement.
 
 ---
 

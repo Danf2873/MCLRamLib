@@ -25,6 +25,15 @@ public:
   Trajectory(const std::vector<TrajectoryPoint> &points) : points(points) {}
 
   /**
+   * @brief Creates a trajectory from a list of positions (geometrically
+   * spaced).
+   * @param poses List of poses (x, y, theta).
+   * @param velocity Average velocity to assume for timing (inches/sec).
+   */
+  static Trajectory fromPoses(const std::vector<Pose2D> &poses,
+                              double velocity = 20.0);
+
+  /**
    * @brief Samples the trajectory at a given time.
    * @param t Time in seconds.
    * @return Interpolated TrajectoryPoint.
@@ -36,6 +45,11 @@ public:
    * @return Duration in seconds.
    */
   double getDuration() const;
+
+  /**
+   * @brief Gets the underlying trajectory points.
+   */
+  const std::vector<TrajectoryPoint> &getPoints() const { return points; }
 
 private:
   std::vector<TrajectoryPoint> points;

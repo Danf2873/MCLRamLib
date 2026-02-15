@@ -63,6 +63,35 @@ void ChassisController::follow(const Trajectory &trajectory, double timeoutMs) {
   stop();
 }
 
+void ChassisController::followPurePursuit(const Trajectory &trajectory,
+                                          double timeoutMs, double lookahead) {
+  uint32_t startTime = pros::millis();
+  double dt = 0.01;
+  int lastIndex = 0;
+  purePursuit.setLookaheadDistance(lookahead);
+
+  const auto &points = trajectory.getPoints();
+  if (points.empty())
+    return;
+
+  while (pros::millis() - startTime < timeoutMs) {
+    manager->update(dt);
+    Pose2D currentPose = manager->getFusedPose();
+
+    // Check if we reached the end
+    if (currentPose.distanceTo(points.back().pose) < 1.0)
+      break;
+
+    auto result =
+        purePursuit.computeControl(currentPose, trajectory, lastIndex);
+    lastIndex = result.second;
+
+    applySpeeds(result.first);
+    pros::delay(dt * 1000);
+  }
+  stop();
+}
+
 void ChassisController::stop() {
   leftMotors->brake();
   rightMotors->brake();

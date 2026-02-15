@@ -43,4 +43,23 @@ double Trajectory::getDuration() const {
   return points.back().time;
 }
 
+Trajectory Trajectory::fromPoses(const std::vector<Pose2D> &poses,
+                                 double velocity) {
+  std::vector<TrajectoryPoint> p;
+  double currentTime = 0;
+  Pose2D lastPose = {0, 0, 0};
+
+  for (size_t i = 0; i < poses.size(); ++i) {
+    if (i > 0) {
+      double dist = poses[i].distanceTo(lastPose);
+      currentTime += dist / velocity;
+    }
+    // We don't have w (angular velocity) easily,
+    // but Pure Pursuit doesn't strictly need it.
+    p.push_back({currentTime, poses[i], velocity, 0.0});
+    lastPose = poses[i];
+  }
+  return Trajectory(p);
+}
+
 } // namespace localization

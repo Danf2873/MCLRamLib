@@ -1,6 +1,17 @@
 # Path Following
 
-This page explains how to create trajectories and follow them using the RAMSETE controller.
+This page explains how to create trajectories and follow them using the RAMSETE and Pure Pursuit controllers.
+
+---
+
+## Choosing a Controller
+
+The library provides two main path-following algorithms:
+
+| Controller | Best For | Path Input | Key Feature |
+|---|---|---|---|
+| **RAMSETE** | Professional smooth curves | Time-stamped `Trajectory` | Nonlinear feedback; handles velocity/time |
+| **Pure Pursuit** | Quick integration with tools | Geometric `Pose2D` list | Lookahead-based; simple and robust |
 
 ---
 
@@ -119,6 +130,51 @@ The `RamseteController` has two tuning parameters:
 
 > [!IMPORTANT]
 > Keep `b > 0` and `0 < zeta < 1`. Start with defaults and only adjust if path following is oscillating (`zeta` too low) or too slow to converge (`b` too low).
+
+---
+
+---
+
+## Pure Pursuit (Geometric Paths)
+
+Pure Pursuit is a simpler algorithm that doesn't care about time. It just tries to head toward a "lookahead point" on your path. This is the **recommended** way to follow paths from tools like **PathJerry**.
+
+### Creating a Geometric Path
+
+You can create a list of `Pose2D` points and let the library handle the rest:
+
+```cpp
+std::vector<Pose2D> myPoints = {
+    {0, 0, 0},
+    {24, 0, 0},
+    {48, 24, M_PI/2}
+};
+
+// Use the pure_pursuit command directly:
+chassis.pure_pursuit(myPoints, 12.0); // 12" lookahead
+```
+
+### PathJerry Integration
+
+PathJerry and other VRC path generators often export paths as a list of coordinates. You can easily convert these into a `Trajectory` if you want to use the high-level `follow` API, or just pass the vector to `pure_pursuit`.
+
+```cpp
+// If you want to use the RAMSETE controller with a geometric list:
+Trajectory jerryPath = Trajectory::fromPoses(myPoints, 20.0); // Assumes 20 in/s
+chassis.follow(jerryPath);
+```
+
+---
+
+## Tuning Pure Pursuit
+
+The main parameter for Pure Pursuit is the **Lookahead Distance**:
+
+- **Small Lookahead (e.g. 6-8"):** Robot will follow the path very closely but may "fishtail" or oscillate if it gets off track.
+- **Large Lookahead (e.g. 15-20"):** Movement will be very smooth and stable, but the robot will "cut corners" on turns.
+
+> [!TIP]
+> A good starting point is usually **12.0 inches**.
 
 ---
 

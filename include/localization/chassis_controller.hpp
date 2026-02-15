@@ -2,9 +2,11 @@
 #define LOCALIZATION_CHASSIS_CONTROLLER_HPP
 
 #include "localization/localization_manager.hpp"
+#include "localization/pure_pursuit.hpp" // Added include
 #include "localization/ramsete.hpp"
 #include "localization/trajectory.hpp"
 #include "pros/motor_group.hpp"
+
 
 namespace localization {
 
@@ -40,11 +42,20 @@ public:
   void moveToPoint(double x, double y, double timeoutMs = 2000);
 
   /**
-   * @brief Follows a trajectory using the RAMSETE controller.
+   * @brief Follow a trajectory using RAMSETE.
    * @param trajectory The trajectory to follow.
    * @param timeoutMs Maximum time to allow for the trajectory.
    */
-  void follow(const Trajectory &trajectory, double timeoutMs = 5000);
+  void follow(const Trajectory &trajectory, double timeoutMs);
+
+  /**
+   * @brief Follow a trajectory using Pure Pursuit.
+   * @param trajectory The trajectory to follow.
+   * @param timeoutMs Maximum time to allow for the trajectory.
+   * @param lookahead The lookahead distance for Pure Pursuit.
+   */
+  void followPurePursuit(const Trajectory &trajectory, double timeoutMs,
+                         double lookahead);
 
   /**
    * @brief Stops the chassis.
@@ -57,6 +68,7 @@ private:
   LocalizationManager *manager;
   RobotGeometry geometry;
   RamseteController ramsete;
+  PurePursuitController purePursuit; // Added member
 
   void applySpeeds(ChassisSpeeds speeds);
 };

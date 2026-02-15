@@ -136,6 +136,12 @@ void MCLChassis::follow(const Trajectory &trajectory, int timeout) {
   controller->follow(trajectory, timeout);
 }
 
+void MCLChassis::pure_pursuit(const std::vector<Pose2D> &poses,
+                              double lookahead, int timeout) {
+  Trajectory traj = Trajectory::fromPoses(poses);
+  controller->followPurePursuit(traj, timeout, lookahead);
+}
+
 void MCLChassis::stop() { controller->stop(); }
 
 } // namespace localization
