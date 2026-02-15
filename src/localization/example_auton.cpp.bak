@@ -58,11 +58,3 @@ void example_autonomous() {
 // TELEMETRY — Print position to the brain screen
 // ─────────────────────────────────────────────────────────
 
-void opcontrol() {
-  while (true) {
-    pros::lcd::print(0, "X: %.1f  Y: %.1f", chassis.get_x(), chassis.get_y());
-    pros::lcd::print(1, "Heading: %.1f°", chassis.get_heading());
-    pros::lcd::print(2, "MCL Conf: %.0f%%", chassis.get_confidence());
-    pros::delay(20);
-  }
-}
